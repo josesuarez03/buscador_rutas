@@ -12,18 +12,19 @@ app.secret_key = 'your_secret_key'
 
 db = connect.connect_mongo()
 
-DEFAULT_WORDLIST = "/usr/share/dirb/wordlists/common.txt"
+# Cambiando la ruta predeterminada por una variable general
+DEFAULT_WORDLIST = "/usr/share/dirb/wordlists/"
 
-def run_dirb(url, wordlist=DEFAULT_WORDLIST):
+def run_dirb(url, wordlist):
     try:
-        output = subprocess.check_output(["/usr/local/bin/dirb", url, wordlist])
+        output = subprocess.check_output(["/usr/local/bin/dirb", url, DEFAULT_WORDLIST + wordlist])
         return [line.split()[1] for line in output.decode().splitlines() if line.startswith("[+]")]
     except subprocess.CalledProcessError as e:
         print(f"Error al escanear {url}: {e}")
         return None
 
-def save_discovered_routes(url):
-    discovered_routes = run_dirb(url)
+def save_discovered_routes(url, wordlist):
+    discovered_routes = run_dirb(url, wordlist)
     if discovered_routes:
         routes_collection = db["routes"]
         data_collection = db["data"]
@@ -37,15 +38,17 @@ def save_discovered_routes(url):
 def index():
     if request.method == 'POST':
         url = request.form['query']
-        thread = Thread(target=save_discovered_routes, args=(url,))
+        wordlist = request.form.get('wordlist', 'commons.txt')  # 'commons.txt' es el valor predeterminado
+        thread = Thread(target=save_discovered_routes, args=(url, wordlist))
         thread.start()
-        return f"Escaneo iniciado para: {url}. Verifique más tarde para los resultados."
+        return f"Escaneo iniciado para: {url} con la wordlist {wordlist}. Verifique más tarde para los resultados."
     return render_template('index.html')
 
 @app.route('/discover', methods=['POST'])
 def discover():
     url = request.form['query']
-    discovered_routes = save_discovered_routes(url)
+    wordlist = request.form.get('wordlist', 'commons.txt')
+    discovered_routes = save_discovered_routes(url, wordlist)
     if discovered_routes:
         return jsonify({"message": "Rutas descubiertas y guardadas"})
     else:
