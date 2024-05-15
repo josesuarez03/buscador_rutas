@@ -1,6 +1,5 @@
 from flask import Flask, render_template, request, jsonify
 import subprocess
-import pymongo
 import requests
 from threading import Thread
 import connect

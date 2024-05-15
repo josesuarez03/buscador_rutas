@@ -1,2 +1,4 @@
 .venv
 mongo
+*.zip
+__pycache__
